@@ -2,7 +2,7 @@ fastapi
 uvicorn[standard]
 langchain
 langchain-community
-langchain-openai     
+langchain-google-genai  # <-- ADDED BACK
 faiss-cpu
 python-dotenv
 pydantic

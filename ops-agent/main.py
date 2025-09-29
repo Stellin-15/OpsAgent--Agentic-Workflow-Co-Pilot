@@ -3,8 +3,8 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-# --- LangChain Imports (FOR OPENAI) ---
-from langchain_openai import OpenAIEmbeddings
+# --- LangChain Imports (FOR GOOGLE) ---
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_community.document_loaders import DirectoryLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -20,7 +20,7 @@ class Ticket(BaseModel):
     description: str
 
 # --- FastAPI App Initialization ---
-app = FastAPI(title="OpsAgent - Powered by OpenAI")
+app = FastAPI(title="OpsAgent - Powered by Gemini")
 
 # --- Startup Logic: Building the Knowledge Base ---
 @app.on_event("startup")
@@ -38,10 +38,10 @@ def startup_event():
     splits = text_splitter.split_documents(docs)
     print(f"📄 Split documents into {len(splits)} chunks.")
     
-    # This now uses the correct OpenAI class
-    embeddings = OpenAIEmbeddings()
+    # This now uses the correct Google class
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
     
-    print("🧠 Building the FAISS vector store with OpenAI embeddings... (this may take a moment)")
+    print("🧠 Building the FAISS vector store with Google embeddings... (this may take a moment)")
     vectorstore = FAISS.from_documents(documents=splits, embedding=embeddings)
     
     print("✅ Knowledge base is built and ready!")
@@ -49,7 +49,7 @@ def startup_event():
 # --- API Endpoints ---
 @app.get("/")
 def read_root():
-    return {"service": "OpsAgent", "status": "running", "model_provider": "OpenAI"}
+    return {"service": "OpsAgent", "status": "running", "model_provider": "Google Gemini"}
 
 @app.post("/tickets")
 async def process_ticket(ticket: Ticket):
