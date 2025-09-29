@@ -2,9 +2,9 @@ fastapi
 uvicorn[standard]
 langchain
 langchain-community
-langchain-openai
+langchain-google-genai
 faiss-cpu
 python-dotenv
 pydantic
 unstructured
-markdown # <-- AND ADD THIS LINE
+markdown
