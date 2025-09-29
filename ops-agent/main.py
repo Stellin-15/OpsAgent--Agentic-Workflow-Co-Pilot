@@ -45,25 +45,19 @@ def startup_event():
 
     print("🔗 Building the RAG chain...")
 
-    # THIS IS THE FINAL CORRECTED LINE
     llm = ChatGoogleGenerativeAI(model="models/gemini-flash-latest", temperature=0.3)
-
     retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
 
     prompt = ChatPromptTemplate.from_template(
         """
         You are an expert IT Operations support agent. Your goal is to draft a helpful,
         concise, and friendly Slack-style reply to a user's ticket.
-
         Use the following CONTEXT from our Standard Operating Procedures (SOPs) to answer.
         Do not use any other information. If the context is not relevant, say you cannot find a solution.
-
         CONTEXT:
         {context}
-
         TICKET:
         {ticket_query}
-
         DRAFT REPLY:
         """
     )
@@ -81,6 +75,7 @@ def startup_event():
 def read_root():
     return {"service": "OpsAgent", "status": "running", "model_provider": "Google Gemini"}
 
+# --- THIS IS THE UPDATED FUNCTION ---
 @app.post("/tickets")
 async def process_ticket(ticket: Ticket):
     query = f"Title: {ticket.title}\nDescription: {ticket.description}"
@@ -90,12 +85,28 @@ async def process_ticket(ticket: Ticket):
 
     draft_reply = rag_chain.invoke(query)
 
+    # --- NEW: Human Approval Step ---
     print("\n--- 🤖 AI DRAFT REPLY ---")
     print(draft_reply)
-    print("-------------------------\n")
+    print("-------------------------")
 
-    return {
-        "status": "draft generated", 
-        "ticket_id": ticket.id,
-        "draft_reply": draft_reply
-    }
+    # This line will PAUSE the entire program and wait for your input
+    # directly in the Docker log terminal.
+    approval = input("Approve this draft? (y/n): ")
+
+    # Check the user's input and respond accordingly
+    if approval.lower() == 'y':
+        print("✅ Draft approved by user.")
+        # In a real application, this is where you would trigger an action,
+        # like posting the message to a real Slack channel.
+        return {
+            "status": "draft_approved", 
+            "ticket_id": ticket.id,
+            "reply": draft_reply
+        }
+    else:
+        print("❌ Draft rejected by user.")
+        return {
+            "status": "draft_rejected",
+            "ticket_id": ticket.id
+        }
