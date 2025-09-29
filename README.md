@@ -80,14 +80,5 @@ docker build -t opsagent .
 
 # Run the container
 docker run --env-file .env -p 8000:8000 opsagent
-```
 
-```
-
----
-
-✅ This is complete and **ready to paste** into your repo.  
-
-Do you want me to also add a **Usage Examples** section (like sample `curl` requests to `/tickets`) so anyone can test it right after setup?
-```
 
