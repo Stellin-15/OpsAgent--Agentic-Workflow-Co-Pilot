@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  ops-agent:
+    build:
+      context: ./ops-agent
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./ops-agent:/app
+      - ./sops:/app/sops
+    env_file:
+      - .env
