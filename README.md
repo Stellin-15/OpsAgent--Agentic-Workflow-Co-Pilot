@@ -6,7 +6,7 @@ This MVP is built with Python, FastAPI, Docker, and powered by Google's Gemini L
 
 <!-- ![OpsAgent Demo GIF](https://your-image-url-here.com/demo.gif)
 *(Recommendation: Record a short GIF of your web UI in action and replace the URL above!)* -->
-
+![alt text](image.png)
 ---
 
 ## ✨ Features
