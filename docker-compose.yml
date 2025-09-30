@@ -10,3 +10,7 @@ services:
       - ./sops:/app/sops
     env_file:
       - .env
+
+# Add these two lines
+stdin_open: true  # This keeps the standard input open
+tty: true         # This allocates a pseudo-TTY (a terminal)
