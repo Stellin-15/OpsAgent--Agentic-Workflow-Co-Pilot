@@ -33,19 +33,20 @@ Follow these instructions to get OpsAgent running on your local machine.
     -   **Google Gemini API Key:** Get one from [Google AI Studio](https://aistudio.google.com/app/apikey).
     -   **Slack Bot Token:** Create a Slack App, give it the `chat:write` scope, and get a Bot Token (`xoxb-...`).
 
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/your-username/your-repo-name.git
-cd your-repo-name
-
-'''
-
-
 ### Future Improvements
 
 - Implement a "Reject" workflow with feedback.  
 - Add support for more document types (e.g., PDFs, Confluence exports).  
 - Store ticket history in a persistent database (e.g., SQLite, PostgreSQL).  
 - Enhance the frontend to show a history of pending and approved tickets.  
-- Add unit and integration tests.  
+- Add unit and integration tests. 
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/your-username/your-repo-name.git
+cd your-repo-name 
+
+
+
+ 
