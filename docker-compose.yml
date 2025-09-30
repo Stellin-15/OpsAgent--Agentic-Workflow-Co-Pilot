@@ -1,6 +1,11 @@
+# You can remove this line to fix the warning
 version: '3.8'
+
 services:
+  # This is the service name
   ops-agent:
+    # All of the following lines are properties of 'ops-agent'
+    # and must be indented further than 'ops-agent:'.
     build:
       context: ./ops-agent
     ports:
@@ -10,7 +15,5 @@ services:
       - ./sops:/app/sops
     env_file:
       - .env
-
-# Add these two lines
-stdin_open: true  # This keeps the standard input open
-tty: true         # This allocates a pseudo-TTY (a terminal)
+    stdin_open: true  # Correctly indented under ops-agent
+    tty: true         # Correctly indented under ops-agent
