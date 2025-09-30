@@ -2,18 +2,17 @@
 version: '3.8'
 
 services:
-  # This is the service name
   ops-agent:
-    # All of the following lines are properties of 'ops-agent'
-    # and must be indented further than 'ops-agent:'.
     build:
       context: ./ops-agent
     ports:
-      - "8001:8000"
+      - "8001:8001"  # <-- CHANGED: API will now be on 8001
+      - "8000:8000"  # <-- NEW: Frontend will be on 8000
     volumes:
       - ./ops-agent:/app
       - ./sops:/app/sops
+      - ./frontend:/app/static # <-- NEW: Mount the frontend folder
     env_file:
       - .env
-    stdin_open: true  # Correctly indented under ops-agent
-    tty: true         # Correctly indented under ops-agent
+    stdin_open: true
+    tty: true
