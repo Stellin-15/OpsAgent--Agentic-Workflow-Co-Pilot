@@ -92,7 +92,7 @@ async def process_ticket(ticket: Ticket):
 
     # This line will PAUSE the entire program and wait for your input
     # directly in the Docker log terminal.
-    approval = input("Approve this draft? (y/n): ")
+    approval = input("Approve this draft? (y/n): ").strip()
 
     # Check the user's input and respond accordingly
     if approval.lower() == 'y':
