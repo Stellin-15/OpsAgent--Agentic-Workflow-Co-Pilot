@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpsAgent Control Panel</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>OpsAgent Control Panel</h1>
+            <p>Your AI-powered On-Call Co-pilot</p>
+        </header>
+
+        <main>
+            <section id="ticket-form-section">
+                <h2>Submit a New Ticket</h2>
+                <form id="ticket-form">
+                    <input type="text" id="ticket-title" placeholder="Ticket Title (e.g., Web server down)" required>
+                    <textarea id="ticket-description" placeholder="Describe the issue in detail..." rows="5" required></textarea>
+                    <button type="submit" id="submit-button">Generate Draft Reply</button>
+                </form>
+            </section>
+
+            <section id="response-section" class="hidden">
+                <h2>Generated Draft</h2>
+                <div id="draft-container">
+                    <pre id="draft-reply"></pre>
+                </div>
+                <div id="approval-buttons">
+                    <button id="approve-button">Approve & Send to Slack</button>
+                    <button id="reject-button">Reject Draft</button>
+                </div>
+            </section>
+            
+            <div id="status-message"></div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

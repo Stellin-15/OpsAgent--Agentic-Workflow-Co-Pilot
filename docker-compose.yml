@@ -1,4 +1,4 @@
-# You can remove this line to fix the warning
+# You can remove the 'version' line to get rid of the warning
 version: '3.8'
 
 services:
@@ -6,13 +6,17 @@ services:
     build:
       context: ./ops-agent
     ports:
-      - "8001:8001"  # <-- CHANGED: API will now be on 8001
-      - "8000:8000"  # <-- NEW: Frontend will be on 8000
+      # We map port 8000 on our Windows machine to port 8000 inside the container.
+      # This single port will serve BOTH the website and the API.
+      - "8000:8000"
     volumes:
+      # This shares our Python code with the container
       - ./ops-agent:/app
+      # This shares our SOPs with the container
       - ./sops:/app/sops
-      - ./frontend:/app/static # <-- NEW: Mount the frontend folder
+      # This shares our new frontend code with the container
+      - ./frontend:/app/static
     env_file:
       - .env
-    stdin_open: true
-    tty: true
+    # We are REMOVING stdin_open and tty because we will be using a web UI
+    # for approval, not the command line input.
