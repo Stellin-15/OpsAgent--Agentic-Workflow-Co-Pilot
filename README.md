@@ -1,84 +1,40 @@
-# OpsAgent — Agentic Workflow Co-Pilot
+# OpsAgent: Your AI-Powered On-Call Co-pilot
 
-## Overview
-**OpsAgent** turns raw IT tickets into helpful draft replies using your SOPs/runbooks.  
+OpsAgent is a smart assistant designed to help IT and DevOps teams resolve incidents faster. It uses a Retrieval-Augmented Generation (RAG) pipeline to understand incoming support tickets, find relevant information from your internal Standard Operating Procedures (SOPs), and draft a high-quality, context-aware response ready for human approval.
 
-**MVP flow:**  
-`Ticket → Retrieve SOP context (FAISS) → LLM draft → Human approval → (Optional) Slack post`
+This MVP is built with Python, FastAPI, Docker, and powered by Google's Gemini LLM. It's designed to be a lightweight, deployable, and extensible foundation for building more complex agentic workflows.
 
----
-
-## Features (MVP)
-- **/tickets (POST):** Accept `{id, title, description}` and return a draft reply.  
-- **SOP ingestion:** Load `.md` / `.txt` files from `sops/`, chunk, embed, store in FAISS.  
-- **Retriever:** Top-k hybrid-ish (start with embeddings; add keyword later).  
-- **Drafting agent:** LLM (**GPT-4o-mini** or **LLaMA-3**) crafts Slack-ready answers grounded in SOP chunks.  
-- **Reviewer step:** CLI approve/reject (or mock with `POST /approve`).  
-- **Dockerized service** with `.env` config.  
-- (Optional) **Slack integration** to post approved messages.  
+<!-- ![OpsAgent Demo GIF](https://your-image-url-here.com/demo.gif)
+*(Recommendation: Record a short GIF of your web UI in action and replace the URL above!)* -->
 
 ---
 
-## Tech Stack
-- **Backend:** Python, Flask (API)  
-- **AI/ML:** LangChain, FAISS (`faiss-cpu`), OpenAI (or local LLaMA-3)  
-- **Config/Utils:** `python-dotenv`, `pydantic`  
-- **Optional:** `slack_sdk` for Slack posting  
+## ✨ Features
+
+-   **RAG Pipeline:** Ingests markdown-based SOPs/runbooks from a local folder.
+-   **AI-Powered Drafts:** Uses Google Gemini (`gemini-flash-latest`) to generate concise, Slack-style replies based on the retrieved knowledge.
+-   **Human-in-the-Loop:** A robust, API-driven workflow ensures a human must approve every AI-generated draft before it's sent.
+-   **Slack Integration:** Approved drafts are automatically posted to a designated Slack channel.
+-   **Simple Frontend:** A clean, modern web UI for submitting tickets and approving drafts.
+-   **Containerized:** Fully containerized with Docker for easy setup and consistent deployment.
+-   **Deployable:** Ready to be deployed on cloud services like Render.
 
 ---
 
-## Project Structure
-```
+## 🚀 Getting Started
 
-opsagent/
-app.py
-ops/
-ingest.py
-retriever.py
-draft.py
-sops/                # your SOP .md/.txt files
-store/faiss_index/   # persisted FAISS
-.env
-requirements.txt
-Dockerfile
+Follow these instructions to get OpsAgent running on your local machine.
 
-````
+### Prerequisites
 
----
+-   **Docker Desktop:** Make sure Docker is installed and running on your system.
+-   **Git:** For cloning the repository.
+-   **API Keys:**
+    -   **Google Gemini API Key:** Get one from [Google AI Studio](https://aistudio.google.com/app/apikey).
+    -   **Slack Bot Token:** Create a Slack App, give it the `chat:write` scope, and get a Bot Token (`xoxb-...`).
 
-## Environment Variables
-Create a `.env` file in the project root with the following values:
-```bash
-OPENAI_API_KEY=sk-...
-MODEL_NAME=gpt-4o-mini
-TOP_K=4
-FAISS_DIR=store/faiss_index
-````
-
----
-
-## Install & Run (Local)
+### 1. Clone the Repository
 
 ```bash
-# Create and activate virtual environment
-python -m venv venv && source venv/bin/activate   # (Windows: venv\Scripts\activate)
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run the app
-python app.py
-```
-
----
-
-## Docker
-
-```bash
-# Build the Docker image
-docker build -t opsagent .
-
-# Run the container
-docker run --env-file .env -p 8000:8000 opsagent
-
-
+git clone https://github.com/your-username/your-repo-name.git
+cd your-repo-name
