@@ -38,3 +38,12 @@ Follow these instructions to get OpsAgent running on your local machine.
 ```bash
 git clone https://github.com/your-username/your-repo-name.git
 cd your-repo-name
+
+
+### Future Improvements
+
+- Implement a "Reject" workflow with feedback.  
+- Add support for more document types (e.g., PDFs, Confluence exports).  
+- Store ticket history in a persistent database (e.g., SQLite, PostgreSQL).  
+- Enhance the frontend to show a history of pending and approved tickets.  
+- Add unit and integration tests.  
