@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Get references to all the HTML elements we'll need
+    // Get references to all the HTML elements
     const ticketForm = document.getElementById('ticket-form');
     const titleInput = document.getElementById('ticket-title');
     const descriptionInput = document.getElementById('ticket-description');
@@ -11,29 +11,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const rejectButton = document.getElementById('reject-button');
     
     const statusMessageEl = document.getElementById('status-message');
+    const originalSubmitText = submitButton.textContent;
 
     let currentTicketId = null;
 
-    // --- Event Listener for the form submission ---
+    // --- Form submission handler ---
     ticketForm.addEventListener('submit', async (event) => {
-        event.preventDefault(); // Prevent the browser from reloading the page
-
-        // Show a "thinking" message
-        submitButton.disabled = true;
-        submitButton.textContent = 'Generating...';
-        statusMessageEl.textContent = '';
+        event.preventDefault();
+        setLoadingState(true);
+        hideStatusMessage();
         responseSection.classList.add('hidden');
 
-        // Create a random ticket ID for this session
         currentTicketId = Math.floor(Math.random() * 100000);
 
         try {
-            // Send the ticket data to our backend API
             const response = await fetch('/api/tickets', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     id: currentTicketId,
                     title: titleInput.value,
@@ -42,68 +36,82 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (!response.ok) {
-                throw new Error('Network response was not ok.');
+                const errorData = await response.json().catch(() => ({ detail: 'Unknown server error.' }));
+                throw new Error(errorData.detail || 'Network response was not ok.');
             }
 
             const data = await response.json();
-
-            // Display the draft reply
             draftReplyEl.textContent = data.draft_reply;
             responseSection.classList.remove('hidden');
 
         } catch (error) {
             console.error('Error submitting ticket:', error);
-            showStatusMessage('Error: Could not generate draft. Check console for details.', 'error');
+            showStatusMessage(`Error: ${error.message}`, 'error');
         } finally {
-            // Re-enable the submit button
-            submitButton.disabled = false;
-            submitButton.textContent = 'Generate Draft Reply';
+            setLoadingState(false);
         }
     });
 
-    // --- Event Listener for the Approve button ---
+    // --- Approve button handler ---
     approveButton.addEventListener('click', async () => {
         if (!currentTicketId) return;
 
         showStatusMessage('Approving and sending to Slack...', 'info');
+        approveButton.disabled = true;
+        rejectButton.disabled = true;
         
         try {
-            // Call the /api/approve endpoint
             const response = await fetch(`/api/approve/${currentTicketId}`);
-            
             if (!response.ok) {
-                throw new Error('Approval request failed.');
+                const errorData = await response.json().catch(() => ({ detail: 'Approval request failed.' }));
+                throw new Error(errorData.detail || 'Approval request failed.');
             }
 
             const data = await response.json();
-
             if (data.status === 'draft_approved_and_sent') {
-                showStatusMessage('Successfully approved and sent to Slack!', 'success');
-                // Hide the response section and clear the form for the next ticket
+                showStatusMessage('Success! Approved and sent to Slack.', 'success');
                 responseSection.classList.add('hidden');
                 ticketForm.reset();
             } else {
-                throw new Error(data.message || 'Unknown approval error.');
+                throw new Error(data.message || 'An unknown approval error occurred.');
             }
 
         } catch (error) {
             console.error('Error approving draft:', error);
             showStatusMessage(`Error: ${error.message}`, 'error');
+        } finally {
+            approveButton.disabled = false;
+            rejectButton.disabled = false;
         }
     });
     
-    // --- Event Listener for the Reject button ---
+    // --- Reject button handler ---
     rejectButton.addEventListener('click', () => {
-        showStatusMessage('Draft rejected. You can submit a new ticket.', 'info');
+        showStatusMessage('Draft rejected. You can edit and resubmit, or start a new ticket.', 'info');
         responseSection.classList.add('hidden');
         ticketForm.reset();
+        titleInput.focus();
         currentTicketId = null;
     });
 
-    // Helper function to show status messages
+    // --- Helper Functions ---
+    function setLoadingState(isLoading) {
+        if (isLoading) {
+            submitButton.disabled = true;
+            submitButton.innerHTML = `<div class="spinner"></div><span>Generating...</span>`;
+        } else {
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalSubmitText;
+        }
+    }
+
     function showStatusMessage(message, type) {
         statusMessageEl.textContent = message;
-        statusMessageEl.style.backgroundColor = type === 'success' ? '#d4edda' : type === 'error' ? '#f8d7da' : '#cce5ff';
-        statusMessageEl.style.color = type === 'success' ? '#155724' : type === 'error' ? '#721c24' : '#004085';
+        statusMessageEl.className = 'status-message'; // Reset classes
+        statusMessageEl.classList.add(type, 'visible');
+    }
+
+    function hideStatusMessage() {
+        statusMessageEl.classList.remove('visible');
     }
 });

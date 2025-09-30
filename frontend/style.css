@@ -1,127 +1,207 @@
+/* --- General Body & Font --- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background-color: #f4f7f9;
-    color: #333;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f0f2f5; /* Lighter, more modern gray */
+    color: #1a202c;
     margin: 0;
-    padding: 20px;
+    /* Use Flexbox to center the content vertically and horizontally */
     display: flex;
     justify-content: center;
-    align-items: flex-start;
+    align-items: center;
     min-height: 100vh;
+    padding: 2rem;
+    box-sizing: border-box;
 }
 
+/* --- Main Container --- */
 .container {
     width: 100%;
-    max-width: 700px;
+    max-width: 768px; /* Wider for a more substantial feel */
     background-color: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-radius: 12px; /* Softer corners */
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     overflow: hidden;
+    transform: translateY(-10px);
+    animation: fadeIn 0.5s ease-out forwards;
 }
 
+@keyframes fadeIn {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* --- Header --- */
 header {
-    background-color: #2c3e50;
+    background: linear-gradient(135deg, #4a90e2, #50e3c2); /* Modern gradient */
     color: white;
-    padding: 20px 25px;
-    border-bottom: 4px solid #3498db;
+    padding: 2rem 2.5rem;
 }
 
 header h1 {
     margin: 0;
-    font-size: 1.8em;
+    font-size: 2.25em;
+    font-weight: 700;
 }
 
 header p {
-    margin: 5px 0 0;
-    opacity: 0.8;
+    margin: 0.25rem 0 0;
+    opacity: 0.9;
+    font-weight: 400;
 }
 
+/* --- Main Content Area --- */
 main {
-    padding: 25px;
+    padding: 2.5rem;
 }
 
 h2 {
-    color: #34495e;
-    border-bottom: 2px solid #ecf0f1;
-    padding-bottom: 10px;
+    color: #2d3748;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 0.75rem;
     margin-top: 0;
+    margin-bottom: 1.5rem;
+    font-size: 1.5em;
 }
 
+/* --- Form Elements --- */
 #ticket-form input,
 #ticket-form textarea {
-    width: calc(100% - 20px);
-    padding: 10px;
-    margin-bottom: 15px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid #cbd5e0;
+    border-radius: 8px;
     font-size: 1em;
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
 }
 
+#ticket-form input:focus,
+#ticket-form textarea:focus {
+    outline: none;
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+}
+
+/* --- Buttons --- */
 button {
-    padding: 12px 20px;
+    padding: 0.8rem 1.5rem;
     border: none;
-    border-radius: 4px;
+    border-radius: 8px;
     font-size: 1em;
-    font-weight: bold;
+    font-weight: 500;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: all 0.2s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 #submit-button {
-    background-color: #3498db;
+    background-color: #4a90e2;
     color: white;
     width: 100%;
 }
-
-#submit-button:hover {
-    background-color: #2980b9;
+#submit-button:hover:not(:disabled) {
+    background-color: #357ABD;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(74, 144, 226, 0.2);
 }
 
-.hidden {
-    display: none;
+#approve-button {
+    background-color: #38a169;
+    color: white;
+}
+#approve-button:hover:not(:disabled) {
+    background-color: #2f855a;
+    transform: translateY(-2px);
 }
 
-#draft-container {
-    background-color: #ecf0f1;
-    border-left: 4px solid #95a5a6;
-    padding: 15px;
-    margin: 20px 0;
-    border-radius: 4px;
+#reject-button {
+    background-color: #e53e3e;
+    color: white;
 }
-
-#draft-reply {
-    white-space: pre-wrap; /* Allows text to wrap */
-    word-wrap: break-word; /* Breaks long words */
-    font-family: "Courier New", Courier, monospace;
-    font-size: 0.95em;
-    margin: 0;
+#reject-button:hover:not(:disabled) {
+    background-color: #c53030;
+    transform: translateY(-2px);
 }
 
 #approval-buttons {
     display: flex;
-    gap: 15px;
+    gap: 1rem;
 }
 
-#approve-button {
-    background-color: #2ecc71;
-    color: white;
-}
-#approve-button:hover {
-    background-color: #27ae60;
+
+/* --- Dynamic Sections & Animations --- */
+.hidden {
+    display: none;
 }
 
-#reject-button {
-    background-color: #e74c3c;
-    color: white;
+#response-section {
+    animation: slideDown 0.4s ease-out;
 }
-#reject-button:hover {
-    background-color: #c0392b;
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
+#draft-container {
+    background-color: #f7fafc;
+    border: 1px solid #e2e8f0;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    border-radius: 8px;
+    position: relative;
+}
+
+#draft-reply {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
+    font-size: 0.9em;
+    line-height: 1.6;
+    color: #4a5568;
+    margin: 0;
+}
+
+/* --- Status Messages --- */
 #status-message {
-    margin-top: 20px;
-    padding: 10px;
-    border-radius: 4px;
-    font-weight: bold;
+    margin-top: 1.5rem;
+    padding: 1rem;
+    border-radius: 8px;
+    font-weight: 500;
     text-align: center;
+    transition: all 0.3s ease-in-out;
+    opacity: 0;
+    transform: translateY(10px);
+}
+#status-message.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+#status-message.success { background-color: #c6f6d5; color: #22543d; }
+#status-message.error { background-color: #fed7d7; color: #822727; }
+#status-message.info { background-color: #bee3f8; color: #2a4365; }
+
+/* --- Loading Spinner Animation --- */
+.spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
