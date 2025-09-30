@@ -2,6 +2,8 @@ import os
 from fastapi import FastAPI
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from slack_sdk import WebClient # <-- NEW: Import the Slack client
+from slack_sdk.errors import SlackApiError
 
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain_community.vectorstores import FAISS
@@ -15,23 +17,24 @@ load_dotenv()
 
 # --- 1. Global Variables & Models ---
 rag_chain = None
-
-# --- NEW: In-Memory "Database" for Pending Drafts ---
-# This is a simple dictionary that will act as temporary storage.
-# The key will be the ticket_id, and the value will be the drafted reply.
 PENDING_DRAFTS = {}
+
+# --- NEW: Initialize the Slack Client ---
+# It will automatically read the SLACK_BOT_TOKEN from our .env file
+slack_client = WebClient(token=os.getenv("SLACK_BOT_TOKEN"))
+SLACK_CHANNEL_ID = os.getenv("SLACK_CHANNEL")
+
 
 class Ticket(BaseModel):
     id: int
     title: str
     description: str
 
-# --- 2. FastAPI App Initialization ---
 app = FastAPI(title="OpsAgent - Powered by Gemini")
 
-# --- 3. Startup Logic (No changes here) ---
 @app.on_event("startup")
 def startup_event():
+    # (No changes to the startup logic)
     print("🚀 Server is starting up...")
     global rag_chain
     sops_folder_path = "/app/sops" 
@@ -67,57 +70,52 @@ def startup_event():
     print("✅ RAG chain is ready!")
 
 
-# --- 4. API Endpoints ---
 @app.get("/")
 def read_root():
     return {"service": "OpsAgent", "status": "running", "model_provider": "Google Gemini"}
 
-# --- MODIFIED: The /tickets endpoint NO LONGER waits ---
 @app.post("/tickets")
 async def process_ticket(ticket: Ticket):
+    # (No changes to the ticket processing logic)
     query = f"Title: {ticket.title}\nDescription: {ticket.description}"
-    
     print(f"\n🔎 Received query for ticket {ticket.id}: {query}")
     print("🤔 Thinking...")
-
     draft_reply = rag_chain.invoke(query)
-
-    # Store the draft in our in-memory "database"
     PENDING_DRAFTS[ticket.id] = draft_reply
-
     print(f"✅ Draft for ticket {ticket.id} generated and stored.")
     print("\n--- 🤖 AI DRAFT REPLY ---")
     print(draft_reply)
     print("-------------------------")
     print(f"To approve, call: GET /approve/{ticket.id}")
-
-    # Immediately return a response to the user
     return {
         "status": "draft_generated",
         "ticket_id": ticket.id,
         "draft_reply": draft_reply,
         "approval_url": f"/approve/{ticket.id}",
-        "reject_url": f"/reject/{ticket.id}" # We can add this for later
+        "reject_url": f"/reject/{ticket.id}"
     }
 
-# --- NEW: The /approve endpoint ---
+# --- MODIFIED: The /approve endpoint now posts to Slack ---
 @app.get("/approve/{ticket_id}")
 async def approve_draft(ticket_id: int):
-    # Check if a draft for this ticket exists
     if ticket_id not in PENDING_DRAFTS:
         return {"status": "error", "message": "No pending draft found for this ticket ID."}
 
-    # Retrieve the draft
     approved_reply = PENDING_DRAFTS[ticket_id]
-    
     print(f"\n✅ Draft for ticket {ticket_id} has been APPROVED by the user.")
-    print("--- MESSAGE ---")
-    print(approved_reply)
-    print("---------------")
-
-    # In the next step, we will add the code HERE to send this message to Slack.
     
-    # Remove the draft from pending since it's now handled
+    # --- NEW: Post the message to Slack ---
+    try:
+        print(f"...\nPosting message to Slack channel: {SLACK_CHANNEL_ID}")
+        response = slack_client.chat_postMessage(
+            channel=SLACK_CHANNEL_ID,
+            text=approved_reply
+        )
+        print("✅ Message posted successfully to Slack!")
+    except SlackApiError as e:
+        print(f"❌ Error posting to Slack: {e.response['error']}")
+        return {"status": "error", "message": f"Failed to post to Slack: {e.response['error']}"}
+
     del PENDING_DRAFTS[ticket_id]
     
-    return {"status": "draft_approved", "ticket_id": ticket_id, "sent_reply": approved_reply}
+    return {"status": "draft_approved_and_sent", "ticket_id": ticket_id}
