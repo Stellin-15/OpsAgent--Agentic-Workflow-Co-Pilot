@@ -1,0 +1,52 @@
+# Horizontal Pod Autoscaler for the API — scales on CPU and queue depth.
+#
+# Queue depth scaling requires the Prometheus Adapter configured to expose
+# the custom metric "opsagent_active_incidents" to the HPA.
+#
+# Install: https://github.com/kubernetes-sigs/prometheus-adapter
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: opsagent-api-hpa
+  namespace: opsagent
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: opsagent-api
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Pods
+      pods:
+        metric:
+          name: opsagent_active_incidents
+        target:
+          type: AverageValue
+          averageValue: "5"  # scale out when avg >5 active incidents per pod
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: opsagent-worker-hpa
+  namespace: opsagent
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: opsagent-worker
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80

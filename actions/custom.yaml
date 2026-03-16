@@ -1,0 +1,128 @@
+# Custom action catalog — user-defined scripts and commands
+# Add your own safe, parameterised operations here.
+#
+# Template format:
+#   name: unique_snake_case_identifier
+#   description: human-readable description
+#   labels: [list, of, tags]
+#   parameters:
+#     - name: param_name
+#       required: true|false
+#       default: "value if not required"
+#       description: "what this param does"
+#   command: "shell command with {param_name} placeholders"
+#   dry_run_command: "safe read-only equivalent, or null"
+#   rollback_command: "undo command, or null"
+#   timeout_seconds: 60
+#   requires_approval: true|false
+#   safety_level: low|medium|high|critical
+#
+# Safety rules (enforced by OpsAgent — do NOT override):
+#   - No rm -rf, DROP TABLE, or destructive DB commands allowed
+#   - All high/critical actions require explicit human approval
+#   - Every action is limited to 300 seconds max timeout
+#   - Failed actions trigger automatic rollback if rollback_command is set
+
+actions:
+
+  - name: disk_usage_check
+    description: "Check disk usage on a host via SSH"
+    labels: [custom, disk, diagnose]
+    parameters:
+      - name: host
+        required: true
+        description: "Target hostname or IP address"
+      - name: path
+        required: false
+        default: "/"
+        description: "Filesystem path to check"
+    command: "ssh {host} df -h {path}"
+    dry_run_command: null   # read-only — same as main command
+    rollback_command: null
+    timeout_seconds: 30
+    requires_approval: false
+    safety_level: low
+
+  - name: service_restart
+    description: "Restart a systemd service on a remote host via SSH"
+    labels: [custom, systemd, restart]
+    parameters:
+      - name: host
+        required: true
+        description: "Target hostname or IP address"
+      - name: service_name
+        required: true
+        description: "systemd service name (e.g. nginx, postgresql)"
+    command: "ssh {host} sudo systemctl restart {service_name}"
+    dry_run_command: "ssh {host} sudo systemctl status {service_name}"
+    rollback_command: "ssh {host} sudo systemctl stop {service_name}"
+    timeout_seconds: 60
+    requires_approval: true
+    safety_level: high
+
+  - name: service_status
+    description: "Check the status of a systemd service on a remote host"
+    labels: [custom, systemd, diagnose]
+    parameters:
+      - name: host
+        required: true
+      - name: service_name
+        required: true
+    command: "ssh {host} sudo systemctl status {service_name}"
+    dry_run_command: null
+    rollback_command: null
+    timeout_seconds: 30
+    requires_approval: false
+    safety_level: low
+
+  - name: clear_app_cache
+    description: "Clear application cache directory on a remote host"
+    labels: [custom, cache, maintenance]
+    parameters:
+      - name: host
+        required: true
+      - name: cache_path
+        required: true
+        description: "Full path to cache directory (must be under /var/cache or /tmp)"
+    command: "ssh {host} find {cache_path} -type f -mtime +1 -delete"
+    dry_run_command: "ssh {host} find {cache_path} -type f -mtime +1 -print"
+    rollback_command: null
+    timeout_seconds: 120
+    requires_approval: true
+    safety_level: medium
+
+  - name: postgres_active_connections
+    description: "Count active PostgreSQL connections (read-only diagnostic)"
+    labels: [custom, postgres, diagnose]
+    parameters:
+      - name: db_host
+        required: true
+      - name: db_name
+        required: true
+      - name: db_user
+        required: false
+        default: "postgres"
+    command: "psql -h {db_host} -U {db_user} -d {db_name} -c \"SELECT count(*), state FROM pg_stat_activity GROUP BY state;\""
+    dry_run_command: null
+    rollback_command: null
+    timeout_seconds: 15
+    requires_approval: false
+    safety_level: low
+
+  - name: postgres_terminate_idle
+    description: "Terminate idle PostgreSQL connections older than 10 minutes"
+    labels: [custom, postgres, maintenance]
+    parameters:
+      - name: db_host
+        required: true
+      - name: db_name
+        required: true
+      - name: db_user
+        required: false
+        default: "postgres"
+    command: "psql -h {db_host} -U {db_user} -d {db_name} -c \"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state = 'idle' AND query_start < now() - interval '10 minutes';\""
+    dry_run_command: "psql -h {db_host} -U {db_user} -d {db_name} -c \"SELECT pid, query_start, state FROM pg_stat_activity WHERE state = 'idle' AND query_start < now() - interval '10 minutes';\""
+    rollback_command: null
+    timeout_seconds: 30
+    requires_approval: true
+    safety_level: high

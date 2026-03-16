@@ -1,0 +1,72 @@
+# AWS CLI action catalog
+# Requires: aws CLI installed and configured with appropriate IAM permissions.
+
+actions:
+
+  - name: ec2_describe_instance
+    description: "Describe an EC2 instance to check its state and health"
+    labels: [aws, ec2, diagnose]
+    parameters:
+      - name: instance_id
+        required: true
+        description: "EC2 instance ID (i-xxxxxxxxxxxxxxxxx)"
+    command: "aws ec2 describe-instances --instance-ids {instance_id} --query 'Reservations[].Instances[].{State:State.Name,Health:Status}'"
+    dry_run_command: null
+    rollback_command: null
+    timeout_seconds: 30
+    requires_approval: false
+    safety_level: low
+
+  - name: ec2_reboot_instance
+    description: "Reboot an EC2 instance gracefully"
+    labels: [aws, ec2, restart]
+    parameters:
+      - name: instance_id
+        required: true
+    command: "aws ec2 reboot-instances --instance-ids {instance_id}"
+    dry_run_command: "aws ec2 reboot-instances --instance-ids {instance_id} --dry-run"
+    rollback_command: null
+    timeout_seconds: 60
+    requires_approval: true
+    safety_level: high
+
+  - name: asg_set_desired_capacity
+    description: "Increase or decrease the desired capacity of an Auto Scaling Group"
+    labels: [aws, autoscaling, scale]
+    parameters:
+      - name: asg_name
+        required: true
+        description: "Auto Scaling Group name"
+      - name: desired_capacity
+        required: true
+        description: "New desired instance count (integer)"
+    command: "aws autoscaling set-desired-capacity --auto-scaling-group-name {asg_name} --desired-capacity {desired_capacity}"
+    dry_run_command: "aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names {asg_name} --query 'AutoScalingGroups[].{Current:DesiredCapacity,Min:MinSize,Max:MaxSize}'"
+    rollback_command: null
+    timeout_seconds: 60
+    requires_approval: true
+    safety_level: medium
+
+  - name: rds_reboot_instance
+    description: "Reboot an RDS DB instance (causes brief downtime)"
+    labels: [aws, rds, restart]
+    parameters:
+      - name: db_instance_identifier
+        required: true
+    command: "aws rds reboot-db-instance --db-instance-identifier {db_instance_identifier}"
+    dry_run_command: "aws rds describe-db-instances --db-instance-identifier {db_instance_identifier} --query 'DBInstances[].{Status:DBInstanceStatus}'"
+    rollback_command: null
+    timeout_seconds: 120
+    requires_approval: true
+    safety_level: critical
+
+  - name: cloudwatch_get_alarms
+    description: "List CloudWatch alarms currently in ALARM state"
+    labels: [aws, cloudwatch, diagnose]
+    parameters: []
+    command: "aws cloudwatch describe-alarms --state-value ALARM --query 'MetricAlarms[].{Name:AlarmName,Metric:MetricName,Reason:StateReason}'"
+    dry_run_command: null
+    rollback_command: null
+    timeout_seconds: 30
+    requires_approval: false
+    safety_level: low

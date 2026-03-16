@@ -1,0 +1,139 @@
+{
+  "title": "OpsAgent SRE Dashboard",
+  "uid": "opsagent-v1",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Alert Ingestion Rate",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "rate(opsagent_incident_alerts_total[5m])",
+          "legendFormat": "{{source}} / {{severity}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Active Incidents",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 0, "w": 4, "h": 4 },
+      "targets": [
+        {
+          "expr": "opsagent_active_incidents",
+          "legendFormat": "Active"
+        }
+      ],
+      "options": { "colorMode": "background", "thresholds": { "steps": [
+        { "color": "green", "value": 0 },
+        { "color": "yellow", "value": 5 },
+        { "color": "red", "value": 10 }
+      ]}}
+    },
+    {
+      "id": 3,
+      "title": "Mean Time to Resolve (MTTR) — P50 / P95",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, rate(opsagent_incident_resolution_seconds_bucket[15m]))",
+          "legendFormat": "P50 MTTR"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(opsagent_incident_resolution_seconds_bucket[15m]))",
+          "legendFormat": "P95 MTTR"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Draft Approval Rate",
+      "type": "piechart",
+      "gridPos": { "x": 12, "y": 8, "w": 6, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by (decision) (opsagent_draft_decisions_total)",
+          "legendFormat": "{{decision}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "LLM Call Latency P95 (by provider)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(opsagent_llm_call_duration_seconds_bucket[5m])) by (provider)",
+          "legendFormat": "P95 {{provider}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "LLM Token Cost / hour",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "rate(opsagent_llm_tokens_total[1h])",
+          "legendFormat": "{{provider}} {{model}} {{direction}}"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "RAG Retrieval Latency P95",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 24, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(opsagent_rag_retrieval_duration_seconds_bucket[5m]))",
+          "legendFormat": "P95 retrieval"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Action Executions (success vs failure)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 24, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "rate(opsagent_action_executions_total[5m])",
+          "legendFormat": "{{action_name}} {{outcome}}"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "RAGAS Confidence Score Distribution",
+      "type": "histogram",
+      "gridPos": { "x": 0, "y": 32, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "rate(opsagent_draft_ragas_confidence_bucket[1h])",
+          "legendFormat": "confidence"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "HTTP Request Rate (by path)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 32, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "rate(opsagent_http_requests_total[5m])",
+          "legendFormat": "{{method}} {{path}} {{status_code}}"
+        }
+      ]
+    }
+  ]
+}

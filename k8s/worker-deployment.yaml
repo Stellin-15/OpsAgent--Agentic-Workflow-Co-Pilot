@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opsagent-worker
+  namespace: opsagent
+  labels:
+    app: opsagent-worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: opsagent-worker
+  template:
+    metadata:
+      labels:
+        app: opsagent-worker
+    spec:
+      containers:
+        - name: worker
+          image: ghcr.io/your-org/opsagent:latest
+          command:
+            - celery
+            - -A
+            - opsagent.worker.celery_app.celery_app
+            - worker
+            - --loglevel=info
+            - --concurrency=4
+            - --queues=incident_processing,indexing
+          envFrom:
+            - configMapRef:
+                name: opsagent-config
+            - secretRef:
+                name: opsagent-secrets
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+          volumeMounts:
+            - name: runbooks
+              mountPath: /app/runbooks
+              readOnly: true
+            - name: actions
+              mountPath: /app/actions
+              readOnly: true
+      volumes:
+        - name: runbooks
+          configMap:
+            name: opsagent-runbooks
+        - name: actions
+          configMap:
+            name: opsagent-actions

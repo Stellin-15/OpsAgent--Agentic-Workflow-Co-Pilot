@@ -1,22 +1,161 @@
-# You can remove the 'version' line to get rid of the warning
-version: '3.8'
-
 services:
-  ops-agent:
+  api:
     build:
-      context: ./ops-agent
+      context: .
+      dockerfile: Dockerfile
     ports:
-      # We map port 8000 on our Windows machine to port 8000 inside the container.
-      # This single port will serve BOTH the website and the API.
       - "8000:8000"
     volumes:
-      # This shares our Python code with the container
-      - ./ops-agent:/app
-      # This shares our SOPs with the container
-      - ./sops:/app/sops
-      # This shares our new frontend code with the container
+      - ./opsagent:/app/opsagent
+      - ./runbooks:/app/runbooks
+      - ./actions:/app/actions
       - ./frontend:/app/static
     env_file:
       - .env
-    # We are REMOVING stdin_open and tty because we will be using a web UI
-    # for approval, not the command line input.
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://opsagent:opsagent@postgres:5432/opsagent
+      - REDIS_URL=redis://redis:6379/0
+      - MLFLOW_TRACKING_URI=http://mlflow:5001
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+      - OTEL_SERVICE_NAME=opsagent-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uvicorn opsagent.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # ── Celery async worker ────────────────────────────────────────────────────
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./opsagent:/app/opsagent
+      - ./runbooks:/app/runbooks
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://opsagent:opsagent@postgres:5432/opsagent
+      - REDIS_URL=redis://redis:6379/0
+      - MLFLOW_TRACKING_URI=http://mlflow:5001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A opsagent.worker.celery_app.celery_app worker --loglevel=info --concurrency=4
+
+  # ── Celery Beat scheduler (daily runbook re-indexing) ─────────────────────
+  beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./opsagent:/app/opsagent
+      - ./runbooks:/app/runbooks
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://opsagent:opsagent@postgres:5432/opsagent
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+    command: celery -A opsagent.worker.celery_app.celery_app beat --loglevel=info
+
+  # ── Flower — Celery task monitoring UI (dev only) ─────────────────────────
+  flower:
+    image: mher/flower:2.0
+    ports:
+      - "5555:5555"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - FLOWER_PORT=5555
+    depends_on:
+      - redis
+
+  # ── Prometheus + Grafana + Jaeger (Phase 5 observability) ────────────────
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.62
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4317:4317"     # OTLP gRPC receiver
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+
+  # ── MLflow experiment tracking UI (Phase 4) ───────────────────────────────
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.18.0
+    ports:
+      - "5001:5001"
+    volumes:
+      - mlflow_data:/mlflow
+    command: >
+      mlflow server
+      --backend-store-uri sqlite:///mlflow/mlflow.db
+      --default-artifact-root /mlflow/artifacts
+      --host 0.0.0.0
+      --port 5001
+
+  # ── PostgreSQL (pgvector enabled) ──────────────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: opsagent
+      POSTGRES_PASSWORD: opsagent
+      POSTGRES_DB: opsagent
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U opsagent -d opsagent"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis — Celery broker + result backend + embedding cache ───────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:
+  mlflow_data:
+  prometheus_data:
+  grafana_data:

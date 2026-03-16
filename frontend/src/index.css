@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Markdown prose overrides for the DraftViewer */
+.prose pre {
+  @apply bg-gray-900 text-green-400 rounded-lg overflow-x-auto;
+}
+
+.prose code {
+  @apply bg-gray-100 text-gray-800 rounded px-1 py-0.5 text-xs font-mono;
+}
+
+.prose h1, .prose h2, .prose h3 {
+  @apply font-semibold text-gray-800;
+}
+
+.prose ul, .prose ol {
+  @apply text-gray-700;
+}

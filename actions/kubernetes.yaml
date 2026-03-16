@@ -1,0 +1,116 @@
+# Kubernetes action catalog
+# Each action is a pre-approved, parameterised command that OpsAgent can execute
+# after human approval. Commands use {variable} placeholders filled at runtime.
+#
+# safety_level: low | medium | high | critical
+#   low      — read-only queries, safe to auto-suggest
+#   medium   — stateful changes with easy rollback (restart, scale)
+#   high     — data-affecting or slow-to-reverse changes
+#   critical — destructive, always requires explicit confirmation
+
+actions:
+
+  - name: rolling_restart
+    description: "Rolling restart of a Kubernetes Deployment (zero-downtime)"
+    labels: [kubernetes, restart, availability]
+    parameters:
+      - name: deployment_name
+        required: true
+        description: "Deployment name (e.g. api, worker)"
+      - name: namespace
+        required: false
+        default: "default"
+        description: "Kubernetes namespace"
+    command: "kubectl rollout restart deployment/{deployment_name} -n {namespace}"
+    dry_run_command: "kubectl rollout restart deployment/{deployment_name} -n {namespace} --dry-run=client"
+    rollback_command: "kubectl rollout undo deployment/{deployment_name} -n {namespace}"
+    timeout_seconds: 120
+    requires_approval: true
+    safety_level: medium
+
+  - name: scale_deployment
+    description: "Set the replica count for a Deployment"
+    labels: [kubernetes, scale]
+    parameters:
+      - name: deployment_name
+        required: true
+      - name: replicas
+        required: true
+        description: "Target replica count (integer)"
+      - name: namespace
+        required: false
+        default: "default"
+    command: "kubectl scale deployment/{deployment_name} --replicas={replicas} -n {namespace}"
+    dry_run_command: "kubectl scale deployment/{deployment_name} --replicas={replicas} -n {namespace} --dry-run=client"
+    rollback_command: null   # caller must supply previous replica count
+    timeout_seconds: 60
+    requires_approval: true
+    safety_level: medium
+
+  - name: describe_pod
+    description: "Describe all pods matching a label selector (read-only)"
+    labels: [kubernetes, diagnose]
+    parameters:
+      - name: label_selector
+        required: true
+        description: "e.g. app=api"
+      - name: namespace
+        required: false
+        default: "default"
+    command: "kubectl describe pod -l {label_selector} -n {namespace}"
+    dry_run_command: null   # read-only — same as main command
+    rollback_command: null
+    timeout_seconds: 30
+    requires_approval: false
+    safety_level: low
+
+  - name: get_pod_logs
+    description: "Fetch the last N lines of logs from pods matching a label"
+    labels: [kubernetes, logs, diagnose]
+    parameters:
+      - name: label_selector
+        required: true
+      - name: tail_lines
+        required: false
+        default: "100"
+      - name: namespace
+        required: false
+        default: "default"
+    command: "kubectl logs -l {label_selector} --tail={tail_lines} -n {namespace}"
+    dry_run_command: null
+    rollback_command: null
+    timeout_seconds: 30
+    requires_approval: false
+    safety_level: low
+
+  - name: delete_pod
+    description: "Delete a specific pod (it will be recreated by its controller)"
+    labels: [kubernetes, restart, high-impact]
+    parameters:
+      - name: pod_name
+        required: true
+      - name: namespace
+        required: false
+        default: "default"
+    command: "kubectl delete pod {pod_name} -n {namespace}"
+    dry_run_command: "kubectl delete pod {pod_name} -n {namespace} --dry-run=client"
+    rollback_command: null
+    timeout_seconds: 60
+    requires_approval: true
+    safety_level: high
+
+  - name: rollout_status
+    description: "Check the rollout status of a Deployment"
+    labels: [kubernetes, diagnose]
+    parameters:
+      - name: deployment_name
+        required: true
+      - name: namespace
+        required: false
+        default: "default"
+    command: "kubectl rollout status deployment/{deployment_name} -n {namespace} --timeout=60s"
+    dry_run_command: null
+    rollback_command: null
+    timeout_seconds: 90
+    requires_approval: false
+    safety_level: low
