@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpsAgent — AI SRE Co-Pilot</title>
+  <meta name="description" content="Alert fires. AI reads your runbooks. Drafts a fix. You approve. Done. Open-source AI incident response co-pilot." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0b0d0f;
+      --bg-2:      #111418;
+      --bg-3:      #181c22;
+      --border:    #1e242c;
+      --border-hi: #2a3340;
+      --amber:     #f59e0b;
+      --amber-dim: #92600a;
+      --green:     #22c55e;
+      --green-dim: #14532d;
+      --red:       #ef4444;
+      --blue:      #3b82f6;
+      --text:      #e2e8f0;
+      --text-2:    #8899aa;
+      --text-3:    #4a5568;
+      --mono:      'JetBrains Mono', monospace;
+      --sans:      'Syne', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 14px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ─── GRID BACKGROUND ─── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 40px 40px;
+      opacity: 0.4;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ─── NOISE GRAIN ─── */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.5;
+    }
+
+    section, nav, footer { position: relative; z-index: 1; }
+
+    /* ─── NAV ─── */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 48px;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(11,13,15,0.85);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text);
+    }
+
+    .nav-logo-icon {
+      width: 28px; height: 28px;
+      background: var(--amber);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: #000;
+      font-family: var(--mono);
+      flex-shrink: 0;
+    }
+
+    .nav-logo-text {
+      font-family: var(--sans);
+      font-weight: 800;
+      font-size: 17px;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-2);
+      text-decoration: none;
+      font-size: 13px;
+      transition: color 0.15s;
+    }
+
+    .nav-links a:hover { color: var(--text); }
+
+    .nav-cta {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 18px;
+      border-radius: 6px;
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border-hi);
+      color: var(--text-2);
+    }
+    .btn-ghost:hover {
+      border-color: var(--amber);
+      color: var(--amber);
+    }
+
+    .btn-amber {
+      background: var(--amber);
+      border: 1px solid var(--amber);
+      color: #000;
+      font-weight: 700;
+    }
+    .btn-amber:hover {
+      background: #fbbf24;
+      box-shadow: 0 0 24px rgba(245,158,11,0.35);
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border-hi);
+      color: var(--text);
+    }
+    .btn-outline:hover {
+      border-color: var(--text-2);
+    }
+
+    /* ─── HERO ─── */
+    .hero {
+      padding: 100px 48px 80px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 12px;
+      border: 1px solid var(--amber-dim);
+      border-radius: 999px;
+      font-size: 12px;
+      color: var(--amber);
+      margin-bottom: 32px;
+      background: rgba(245,158,11,0.07);
+    }
+
+    .hero-badge-dot {
+      width: 6px; height: 6px;
+      background: var(--amber);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .hero h1 {
+      font-family: var(--sans);
+      font-size: clamp(42px, 6vw, 76px);
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      max-width: 14ch;
+      margin-bottom: 28px;
+    }
+
+    .hero h1 em {
+      font-style: normal;
+      color: var(--amber);
+    }
+
+    .hero-sub {
+      font-size: 16px;
+      color: var(--text-2);
+      max-width: 52ch;
+      line-height: 1.7;
+      margin-bottom: 44px;
+      font-family: var(--mono);
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .hero-actions .btn { font-size: 14px; padding: 12px 24px; }
+
+    .hero-note {
+      margin-top: 20px;
+      font-size: 12px;
+      color: var(--text-3);
+    }
+
+    .hero-note a { color: var(--text-2); }
+
+    /* ─── FLOW DEMO ─── */
+    .flow-section {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 48px 100px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      color: var(--amber);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .flow-pipeline {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0;
+      margin: 56px 0;
+      position: relative;
+    }
+
+    .flow-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.5s, transform 0.5s;
+    }
+
+    .flow-step.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .flow-step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      top: 28px;
+      right: -50%;
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, var(--border-hi), var(--amber-dim));
+      z-index: 0;
+    }
+
+    .flow-icon {
+      width: 56px; height: 56px;
+      border-radius: 12px;
+      border: 1px solid var(--border-hi);
+      background: var(--bg-2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      margin-bottom: 16px;
+      position: relative;
+      z-index: 1;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .flow-step.active .flow-icon {
+      border-color: var(--amber);
+      box-shadow: 0 0 20px rgba(245,158,11,0.25);
+    }
+
+    .flow-step-label {
+      font-size: 12px;
+      color: var(--text-2);
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    .flow-step-sub {
+      font-size: 11px;
+      color: var(--text-3);
+      line-height: 1.4;
+    }
+
+    /* ─── TERMINAL ─── */
+    .terminal-wrap {
+      border: 1px solid var(--border-hi);
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--bg-2);
+      margin-top: 56px;
+    }
+
+    .terminal-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-3);
+    }
+
+    .t-dot {
+      width: 11px; height: 11px;
+      border-radius: 50%;
+    }
+
+    .t-red { background: #ff5f57; }
+    .t-yellow { background: #ffbd2e; }
+    .t-green { background: #28ca41; }
+
+    .terminal-title {
+      font-size: 12px;
+      color: var(--text-3);
+      margin-left: 8px;
+    }
+
+    .terminal-body {
+      padding: 24px 24px 32px;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 2;
+      min-height: 320px;
+    }
+
+    .t-line { display: block; }
+    .t-prompt { color: var(--text-3); }
+    .t-cmd { color: var(--text); }
+    .t-amber { color: var(--amber); }
+    .t-green { color: var(--green); }
+    .t-red { color: var(--red); }
+    .t-blue { color: var(--blue); }
+    .t-dim { color: var(--text-3); }
+
+    .cursor {
+      display: inline-block;
+      width: 8px; height: 14px;
+      background: var(--amber);
+      vertical-align: middle;
+      animation: blink 1s step-end infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    /* ─── STATS ─── */
+    .stats-section {
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 60px 48px;
+      background: var(--bg-2);
+    }
+
+    .stats-grid {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 2px;
+    }
+
+    .stat-item {
+      padding: 32px 40px;
+      border-right: 1px solid var(--border);
+    }
+
+    .stat-item:last-child { border-right: none; }
+
+    .stat-num {
+      font-family: var(--sans);
+      font-size: 48px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .stat-num span { color: var(--amber); }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-3);
+      letter-spacing: 0.04em;
+    }
+
+    /* ─── FEATURES ─── */
+    .features-section {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 100px 48px;
+    }
+
+    .features-header {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+      margin-bottom: 72px;
+      align-items: end;
+    }
+
+    .features-header h2 {
+      font-family: var(--sans);
+      font-size: clamp(28px, 4vw, 44px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+    }
+
+    .features-header p {
+      color: var(--text-2);
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .feature-card {
+      background: var(--bg);
+      padding: 36px 32px;
+      transition: background 0.2s;
+    }
+
+    .feature-card:hover { background: var(--bg-2); }
+
+    .feature-icon {
+      font-size: 28px;
+      margin-bottom: 20px;
+      display: block;
+    }
+
+    .feature-title {
+      font-family: var(--sans);
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: var(--text);
+    }
+
+    .feature-desc {
+      font-size: 13px;
+      color: var(--text-2);
+      line-height: 1.7;
+    }
+
+    .feature-tag {
+      display: inline-block;
+      margin-top: 16px;
+      padding: 3px 10px;
+      border: 1px solid var(--border-hi);
+      border-radius: 4px;
+      font-size: 11px;
+      color: var(--text-3);
+      letter-spacing: 0.06em;
+    }
+
+    .feature-tag.oss {
+      border-color: var(--green-dim);
+      color: var(--green);
+    }
+
+    /* ─── PRICING ─── */
+    .pricing-section {
+      background: var(--bg-2);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 100px 48px;
+    }
+
+    .pricing-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .pricing-header {
+      text-align: center;
+      margin-bottom: 64px;
+    }
+
+    .pricing-header h2 {
+      font-family: var(--sans);
+      font-size: clamp(28px, 4vw, 44px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 14px;
+    }
+
+    .pricing-header p {
+      color: var(--text-2);
+      font-size: 14px;
+    }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .price-card {
+      border: 1px solid var(--border-hi);
+      border-radius: 12px;
+      padding: 32px 28px;
+      background: var(--bg);
+      position: relative;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .price-card:hover {
+      border-color: var(--border-hi);
+    }
+
+    .price-card.featured {
+      border-color: var(--amber);
+      background: rgba(245,158,11,0.04);
+    }
+
+    .price-card.featured::before {
+      content: 'MOST POPULAR';
+      position: absolute;
+      top: -11px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--amber);
+      color: #000;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      padding: 2px 12px;
+      border-radius: 999px;
+    }
+
+    .price-tier {
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: var(--text-3);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .price-amount {
+      font-family: var(--sans);
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .price-amount sup {
+      font-size: 20px;
+      font-weight: 600;
+      vertical-align: super;
+    }
+
+    .price-period {
+      font-size: 12px;
+      color: var(--text-3);
+      margin-bottom: 28px;
+    }
+
+    .price-divider {
+      height: 1px;
+      background: var(--border);
+      margin-bottom: 24px;
+    }
+
+    .price-features {
+      list-style: none;
+      margin-bottom: 32px;
+    }
+
+    .price-features li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-2);
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+
+    .price-features li::before {
+      content: '✓';
+      color: var(--green);
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .price-cta {
+      display: block;
+      width: 100%;
+      text-align: center;
+      padding: 11px;
+      border-radius: 6px;
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s;
+    }
+
+    .price-cta-ghost {
+      border: 1px solid var(--border-hi);
+      color: var(--text-2);
+    }
+    .price-cta-ghost:hover {
+      border-color: var(--amber);
+      color: var(--amber);
+    }
+
+    .price-cta-amber {
+      background: var(--amber);
+      border: 1px solid var(--amber);
+      color: #000;
+      font-weight: 700;
+    }
+    .price-cta-amber:hover {
+      background: #fbbf24;
+      box-shadow: 0 0 20px rgba(245,158,11,0.3);
+    }
+
+    /* ─── INTEGRATIONS ─── */
+    .integrations-section {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 100px 48px;
+      text-align: center;
+    }
+
+    .integrations-section h2 {
+      font-family: var(--sans);
+      font-size: clamp(24px, 3vw, 36px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 14px;
+    }
+
+    .integrations-section p {
+      color: var(--text-2);
+      font-size: 14px;
+      margin-bottom: 56px;
+    }
+
+    .integrations-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    .integration-chip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      border: 1px solid var(--border-hi);
+      border-radius: 8px;
+      background: var(--bg-2);
+      font-size: 13px;
+      color: var(--text-2);
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .integration-chip:hover {
+      border-color: var(--amber-dim);
+      color: var(--amber);
+    }
+
+    .integration-chip-icon { font-size: 18px; }
+
+    /* ─── CTA BANNER ─── */
+    .cta-section {
+      padding: 0 48px 100px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .cta-banner {
+      border: 1px solid var(--border-hi);
+      border-radius: 16px;
+      padding: 72px 80px;
+      background: var(--bg-2);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 48px;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-banner::before {
+      content: '';
+      position: absolute;
+      top: -80px; right: -80px;
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(245,158,11,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .cta-banner h2 {
+      font-family: var(--sans);
+      font-size: clamp(24px, 3vw, 36px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+    }
+
+    .cta-banner p {
+      color: var(--text-2);
+      font-size: 14px;
+      max-width: 52ch;
+    }
+
+    .cta-banner-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: flex-end;
+    }
+
+    .cta-banner-actions .btn { font-size: 14px; padding: 13px 28px; }
+
+    /* ─── FOOTER ─── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 48px;
+    }
+
+    .footer-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .footer-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-2);
+      font-size: 13px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .footer-links a {
+      color: var(--text-3);
+      text-decoration: none;
+      font-size: 13px;
+      transition: color 0.15s;
+    }
+
+    .footer-links a:hover { color: var(--text-2); }
+
+    .footer-right {
+      font-size: 12px;
+      color: var(--text-3);
+      text-align: right;
+    }
+
+    /* ─── ANIMATE IN ─── */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ─── MOBILE ─── */
+    @media (max-width: 900px) {
+      nav { padding: 16px 24px; }
+      .nav-links { display: none; }
+      .hero { padding: 64px 24px 48px; }
+      .flow-section { padding: 0 24px 64px; }
+      .flow-pipeline { grid-template-columns: 1fr; gap: 24px; }
+      .flow-step::after { display: none; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .stat-item { border-right: none; border-bottom: 1px solid var(--border); }
+      .features-section { padding: 64px 24px; }
+      .features-header { grid-template-columns: 1fr; gap: 24px; }
+      .features-grid { grid-template-columns: 1fr; }
+      .pricing-section { padding: 64px 24px; }
+      .pricing-grid { grid-template-columns: 1fr; }
+      .integrations-section { padding: 64px 24px; }
+      .cta-section { padding: 0 24px 64px; }
+      .cta-banner { grid-template-columns: 1fr; padding: 48px 32px; }
+      .cta-banner-actions { align-items: flex-start; }
+      footer { padding: 32px 24px; }
+      .footer-inner { flex-direction: column; gap: 24px; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── NAV ─── -->
+<nav>
+  <a href="#" class="nav-logo">
+    <div class="nav-logo-icon">⚡</div>
+    <span class="nav-logo-text">OpsAgent</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#demo">How it works</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+    <li><a href="https://github.com/your-org/opsagent" target="_blank">GitHub ↗</a></li>
+  </ul>
+  <div class="nav-cta">
+    <a href="https://github.com/your-org/opsagent" class="btn btn-ghost" target="_blank">⭐ Star on GitHub</a>
+    <a href="#pricing" class="btn btn-amber">Get started</a>
+  </div>
+</nav>
+
+<!-- ─── HERO ─── -->
+<section class="hero">
+  <div class="hero-badge">
+    <span class="hero-badge-dot"></span>
+    MIT licensed · Self-hostable · Production-ready
+  </div>
+
+  <h1>Your AI<br/>SRE <em>co‑pilot</em><br/>for incidents.</h1>
+
+  <p class="hero-sub">
+    Alert fires. AI reads your runbooks. Drafts a fix in seconds.<br/>
+    You approve in Slack. Actions run safely. Incident closed.
+  </p>
+
+  <div class="hero-actions">
+    <a href="https://github.com/your-org/opsagent" class="btn btn-amber" target="_blank">
+      → docker compose up
+    </a>
+    <a href="#demo" class="btn btn-outline">See how it works</a>
+    <a href="#pricing" class="btn btn-ghost">View pricing</a>
+  </div>
+
+  <p class="hero-note">
+    Free to self-host. Cloud SaaS from $29/month. No credit card to start.<br/>
+    Integrates with <a href="#">Prometheus</a>, <a href="#">Grafana</a>, <a href="#">PagerDuty</a>, <a href="#">Slack</a>.
+  </p>
+</section>
+
+<!-- ─── FLOW DEMO ─── -->
+<section class="flow-section" id="demo">
+  <div class="section-label">// how it works</div>
+
+  <div class="flow-pipeline" id="flow-pipeline">
+    <div class="flow-step" data-delay="0">
+      <div class="flow-icon">🔔</div>
+      <div class="flow-step-label">Alert fires</div>
+      <div class="flow-step-sub">Prometheus, Grafana, PagerDuty, or manual webhook</div>
+    </div>
+    <div class="flow-step" data-delay="200">
+      <div class="flow-icon">📚</div>
+      <div class="flow-step-label">RAG retrieval</div>
+      <div class="flow-step-sub">pgvector hybrid search finds relevant runbooks</div>
+    </div>
+    <div class="flow-step" data-delay="400">
+      <div class="flow-icon">🤖</div>
+      <div class="flow-step-label">AI drafts fix</div>
+      <div class="flow-step-sub">Multi-LLM router: Gemini → Claude → GPT-4o</div>
+    </div>
+    <div class="flow-step" data-delay="600">
+      <div class="flow-icon">💬</div>
+      <div class="flow-step-label">Slack approval</div>
+      <div class="flow-step-sub">One-click Approve / Reject with full draft inline</div>
+    </div>
+    <div class="flow-step" data-delay="800">
+      <div class="flow-icon">✅</div>
+      <div class="flow-step-label">Safe execution</div>
+      <div class="flow-step-sub">Dry-run first, audit log, auto-rollback on failure</div>
+    </div>
+  </div>
+
+  <div class="terminal-wrap fade-in">
+    <div class="terminal-bar">
+      <span class="t-dot t-red"></span>
+      <span class="t-dot t-yellow"></span>
+      <span class="t-dot t-green"></span>
+      <span class="terminal-title">opsagent — incident #4291 · HighCPU · api-server-3</span>
+    </div>
+    <div class="terminal-body" id="terminal-body">
+      <span class="t-line"><span class="t-prompt">» </span><span class="t-dim">00:00:00.000</span> <span class="t-amber">[ALERT]</span> Alert received from AlertManager</span>
+      <span class="t-line"><span class="t-prompt">  </span><span class="t-dim">name</span>     = HighCPU  <span class="t-dim">severity</span> = critical</span>
+      <span class="t-line"><span class="t-prompt">  </span><span class="t-dim">instance</span> = api-server-3  <span class="t-dim">value</span> = 96.2%</span>
+      <span class="t-line"> </span>
+      <span class="t-line"><span class="t-prompt">» </span><span class="t-dim">00:00:00.003</span> <span class="t-blue">[RAG]</span> Webhook returned in <span class="t-green">3ms</span> · queuing async task</span>
+      <span class="t-line"><span class="t-prompt">» </span><span class="t-dim">00:00:00.041</span> <span class="t-blue">[RAG]</span> pgvector hybrid search → 4 runbook chunks retrieved</span>
+      <span class="t-line"><span class="t-prompt">  </span><span class="t-dim">top chunk</span> = runbooks/high-cpu-runbook.md  <span class="t-dim">score</span> = 0.94</span>
+      <span class="t-line"> </span>
+      <span class="t-line"><span class="t-prompt">» </span><span class="t-dim">00:00:00.890</span> <span class="t-amber">[LLM]</span> Gemini 2.0 Flash → draft generated</span>
+      <span class="t-line"><span class="t-prompt">  </span><span class="t-dim">ragas.faithfulness</span> = 0.96  <span class="t-dim">context_precision</span> = 0.91</span>
+      <span class="t-line"> </span>
+      <span class="t-line"><span class="t-prompt">» </span><span class="t-dim">00:00:01.102</span> <span class="t-blue">[SLACK]</span> Draft posted to #incidents — awaiting approval</span>
+      <span class="t-line"> </span>
+      <span class="t-line"><span class="t-prompt">» </span><span class="t-dim">00:02:14.007</span> <span class="t-green">[APPROVED]</span> jdoe approved action: restart_high_cpu_pods</span>
+      <span class="t-line"><span class="t-prompt">» </span><span class="t-dim">00:02:14.008</span> <span class="t-amber">[EXEC]</span> dry-run: kubectl rollout restart deploy/api-server</span>
+      <span class="t-line"><span class="t-prompt">  </span>deployment.apps/api-server restarted <span class="t-dim">(dry-run)</span></span>
+      <span class="t-line"><span class="t-prompt">» </span><span class="t-dim">00:02:14.500</span> <span class="t-amber">[EXEC]</span> live: kubectl rollout restart deploy/api-server</span>
+      <span class="t-line"><span class="t-prompt">  </span>deployment.apps/api-server restarted</span>
+      <span class="t-line"> </span>
+      <span class="t-line"><span class="t-prompt">» </span><span class="t-dim">00:03:40.221</span> <span class="t-green">[RESOLVED]</span> CPU 96.2% → 18.4% · MTTR = <span class="t-green">3m 40s</span> · logged to audit_log</span>
+      <span class="t-line"><span class="cursor"></span></span>
+    </div>
+  </div>
+</section>
+
+<!-- ─── STATS ─── -->
+<section class="stats-section">
+  <div class="stats-grid">
+    <div class="stat-item fade-in">
+      <div class="stat-num"><span id="stat1">0</span>ms</div>
+      <div class="stat-label">WEBHOOK RESPONSE TIME</div>
+    </div>
+    <div class="stat-item fade-in" style="transition-delay:0.1s">
+      <div class="stat-num"><span id="stat2">0</span>%</div>
+      <div class="stat-label">RUNBOOK FAITHFULNESS SCORE</div>
+    </div>
+    <div class="stat-item fade-in" style="transition-delay:0.2s">
+      <div class="stat-num"><span id="stat3">0</span></div>
+      <div class="stat-label">ALERT SOURCES SUPPORTED</div>
+    </div>
+    <div class="stat-item fade-in" style="transition-delay:0.3s">
+      <div class="stat-num"><span id="stat4">0</span></div>
+      <div class="stat-label">PROMETHEUS METRICS BUILT-IN</div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FEATURES ─── -->
+<section class="features-section" id="features">
+  <div class="features-header fade-in">
+    <div>
+      <div class="section-label">// features</div>
+      <h2>Everything your on-call needs. Nothing it doesn't.</h2>
+    </div>
+    <p>OpsAgent handles the toil: reading runbooks, generating remediation steps, and routing approvals — so your engineers can focus on the things that actually require human judgment.</p>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature-card fade-in">
+      <span class="feature-icon">⚡</span>
+      <div class="feature-title">Sub-5ms webhook ingestion</div>
+      <div class="feature-desc">Webhook returns immediately. All RAG + LLM processing runs async via Celery + Redis. Your alerting pipeline never blocks.</div>
+      <span class="feature-tag oss">OSS CORE</span>
+    </div>
+
+    <div class="feature-card fade-in" style="transition-delay:0.05s">
+      <span class="feature-icon">🔍</span>
+      <div class="feature-title">Hybrid RAG retrieval</div>
+      <div class="feature-desc">pgvector dense embeddings fused with BM25 keyword search via Reciprocal Rank Fusion. Finds the right runbook section even when wording doesn't match exactly.</div>
+      <span class="feature-tag oss">OSS CORE</span>
+    </div>
+
+    <div class="feature-card fade-in" style="transition-delay:0.1s">
+      <span class="feature-icon">🤖</span>
+      <div class="feature-title">Multi-LLM router</div>
+      <div class="feature-desc">Gemini → Claude → GPT-4o fallback chain with A/B routing by incident ID. Low-confidence drafts are automatically flagged in Slack before you approve.</div>
+      <span class="feature-tag oss">OSS CORE</span>
+    </div>
+
+    <div class="feature-card fade-in" style="transition-delay:0.15s">
+      <span class="feature-icon">🛡️</span>
+      <div class="feature-title">Safe execution engine</div>
+      <div class="feature-desc">Blocked patterns at catalog-load time (rm -rf, DROP TABLE). Dry-run before every live action. subprocess exec with no shell=True. Full rollback on failure.</div>
+      <span class="feature-tag oss">OSS CORE</span>
+    </div>
+
+    <div class="feature-card fade-in" style="transition-delay:0.2s">
+      <span class="feature-icon">📊</span>
+      <div class="feature-title">Observability built-in</div>
+      <div class="feature-desc">9 Prometheus metrics, 10-panel Grafana dashboard, OpenTelemetry traces to Jaeger. RAGAS scores logged to MLflow. Ship it and you're already observable.</div>
+      <span class="feature-tag oss">OSS CORE</span>
+    </div>
+
+    <div class="feature-card fade-in" style="transition-delay:0.25s">
+      <span class="feature-icon">🔐</span>
+      <div class="feature-title">SaaS auth + billing</div>
+      <div class="feature-desc">JWT Bearer auth, Redis sliding-window rate limiting by tier, Stripe checkout + webhook handler. Kubernetes HPA scales on queue depth. Terraform for GCP.</div>
+      <span class="feature-tag">CLOUD</span>
+    </div>
+  </div>
+</section>
+
+<!-- ─── INTEGRATIONS ─── -->
+<section class="integrations-section">
+  <div class="section-label" style="text-align:center">// integrations</div>
+  <h2 class="fade-in">Works with your existing stack.</h2>
+  <p class="fade-in">Drop in alongside the tools you already run. No rip-and-replace required.</p>
+
+  <div class="integrations-grid fade-in">
+    <div class="integration-chip"><span class="integration-chip-icon">🔥</span> Prometheus</div>
+    <div class="integration-chip"><span class="integration-chip-icon">📈</span> Grafana</div>
+    <div class="integration-chip"><span class="integration-chip-icon">📟</span> PagerDuty</div>
+    <div class="integration-chip"><span class="integration-chip-icon">💬</span> Slack</div>
+    <div class="integration-chip"><span class="integration-chip-icon">☸️</span> Kubernetes</div>
+    <div class="integration-chip"><span class="integration-chip-icon">☁️</span> AWS CLI</div>
+    <div class="integration-chip"><span class="integration-chip-icon">🧠</span> Google Gemini</div>
+    <div class="integration-chip"><span class="integration-chip-icon">⚡</span> Claude API</div>
+    <div class="integration-chip"><span class="integration-chip-icon">🤖</span> GPT-4o</div>
+    <div class="integration-chip"><span class="integration-chip-icon">🐘</span> PostgreSQL + pgvector</div>
+    <div class="integration-chip"><span class="integration-chip-icon">🔴</span> Redis</div>
+    <div class="integration-chip"><span class="integration-chip-icon">📦</span> MLflow</div>
+    <div class="integration-chip"><span class="integration-chip-icon">🔭</span> Jaeger / OTLP</div>
+    <div class="integration-chip"><span class="integration-chip-icon">🌿</span> GitHub Actions</div>
+    <div class="integration-chip"><span class="integration-chip-icon">💳</span> Stripe</div>
+  </div>
+</section>
+
+<!-- ─── PRICING ─── -->
+<section class="pricing-section" id="pricing">
+  <div class="pricing-inner">
+    <div class="pricing-header fade-in">
+      <div class="section-label" style="text-align:center">// pricing</div>
+      <h2>Start free. Scale when it pays for itself.</h2>
+      <p>The OSS core is MIT licensed and fully self-hostable — forever. Cloud SaaS adds managed infra, SSO, and SLA.</p>
+    </div>
+
+    <div class="pricing-grid">
+      <!-- OSS -->
+      <div class="price-card fade-in">
+        <div class="price-tier">OSS · Self-hosted</div>
+        <div class="price-amount">Free</div>
+        <div class="price-period">forever · bring your own infra</div>
+        <div class="price-divider"></div>
+        <ul class="price-features">
+          <li>Unlimited alerts</li>
+          <li>All ingestion adapters</li>
+          <li>Full AI pipeline (RAG + LLM)</li>
+          <li>Safe execution engine</li>
+          <li>Grafana dashboard + Prometheus metrics</li>
+          <li>MIT licensed source code</li>
+        </ul>
+        <a href="https://github.com/your-org/opsagent" class="price-cta price-cta-ghost" target="_blank">→ Clone on GitHub</a>
+      </div>
+
+      <!-- Starter -->
+      <div class="price-card fade-in" style="transition-delay:0.1s">
+        <div class="price-tier">Starter</div>
+        <div class="price-amount"><sup>$</sup>29</div>
+        <div class="price-period">per month · 3 users</div>
+        <div class="price-divider"></div>
+        <ul class="price-features">
+          <li>500 alerts / month</li>
+          <li>Managed GCP infra</li>
+          <li>Automatic DB backups</li>
+          <li>Slack bot hosted for you</li>
+          <li>Community support</li>
+        </ul>
+        <a href="#" class="price-cta price-cta-ghost">Get started</a>
+      </div>
+
+      <!-- Team -->
+      <div class="price-card featured fade-in" style="transition-delay:0.2s">
+        <div class="price-tier">Team</div>
+        <div class="price-amount"><sup>$</sup>79</div>
+        <div class="price-period">per month · 15 users</div>
+        <div class="price-divider"></div>
+        <ul class="price-features">
+          <li>5,000 alerts / month</li>
+          <li>Everything in Starter</li>
+          <li>RAGAS quality reports</li>
+          <li>MLflow experiment tracking</li>
+          <li>Custom action YAML catalog</li>
+          <li>Email + Slack support</li>
+        </ul>
+        <a href="#" class="price-cta price-cta-amber">Start free trial</a>
+      </div>
+
+      <!-- Enterprise -->
+      <div class="price-card fade-in" style="transition-delay:0.3s">
+        <div class="price-tier">Enterprise</div>
+        <div class="price-amount"><sup>$</sup>299</div>
+        <div class="price-period">per month · unlimited users</div>
+        <div class="price-divider"></div>
+        <ul class="price-features">
+          <li>Unlimited alerts</li>
+          <li>SSO / SAML</li>
+          <li>99.9% SLA</li>
+          <li>Dedicated GCP project</li>
+          <li>Custom LLM provider</li>
+          <li>Dedicated Slack channel</li>
+          <li>SOC 2 report on request</li>
+        </ul>
+        <a href="mailto:sales@opsagent.io" class="price-cta price-cta-ghost">Contact sales</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── CTA BANNER ─── -->
+<section class="cta-section">
+  <div class="cta-banner fade-in">
+    <div>
+      <h2>Ship it this afternoon.</h2>
+      <p>
+        Three commands and you have a running AI incident co-pilot. Self-host free, or let us run it for you. Either way, your on-call engineers sleep better tonight.
+      </p>
+    </div>
+    <div class="cta-banner-actions">
+      <a href="https://github.com/your-org/opsagent" class="btn btn-amber" target="_blank">→ docker compose up</a>
+      <a href="#pricing" class="btn btn-ghost">View cloud pricing</a>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FOOTER ─── -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo">
+      <div class="nav-logo-icon">⚡</div>
+      <span style="font-family:var(--sans);font-weight:800;font-size:15px;">OpsAgent</span>
+      <span style="color:var(--text-3);margin-left:8px;">MIT licensed</span>
+    </div>
+
+    <ul class="footer-links">
+      <li><a href="https://github.com/your-org/opsagent" target="_blank">GitHub</a></li>
+      <li><a href="#">Docs</a></li>
+      <li><a href="#">Changelog</a></li>
+      <li><a href="mailto:hello@opsagent.io">Contact</a></li>
+    </ul>
+
+    <div class="footer-right">
+      <div>© 2026 OpsAgent</div>
+      <div style="margin-top:4px;color:var(--text-3)">Built by engineers, for engineers.</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // ─── INTERSECTION OBSERVER: fade in + flow steps ───
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.15 });
+
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+  // flow steps stagger
+  const flowObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const steps = document.querySelectorAll('.flow-step');
+        steps.forEach((step, i) => {
+          setTimeout(() => step.classList.add('visible'), i * 160);
+        });
+        flowObserver.disconnect();
+      }
+    });
+  }, { threshold: 0.2 });
+
+  const pipeline = document.getElementById('flow-pipeline');
+  if (pipeline) flowObserver.observe(pipeline);
+
+  // ─── ANIMATED FLOW STEP HIGHLIGHT ───
+  const steps = document.querySelectorAll('.flow-step');
+  let currentStep = 0;
+  function highlightNextStep() {
+    steps.forEach(s => s.classList.remove('active'));
+    if (steps[currentStep]) steps[currentStep].classList.add('active');
+    currentStep = (currentStep + 1) % steps.length;
+  }
+  setInterval(highlightNextStep, 1800);
+
+  // ─── COUNT-UP STATS ───
+  const statsTargets = [
+    { id: 'stat1', target: 5 },
+    { id: 'stat2', target: 96 },
+    { id: 'stat3', target: 4 },
+    { id: 'stat4', target: 9 },
+  ];
+
+  const statsSection = document.querySelector('.stats-section');
+  let statsAnimated = false;
+
+  const statsObserver = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting && !statsAnimated) {
+      statsAnimated = true;
+      statsTargets.forEach(({ id, target }) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        let current = 0;
+        const step = target / 40;
+        const timer = setInterval(() => {
+          current = Math.min(current + step, target);
+          el.textContent = Math.round(current);
+          if (current >= target) clearInterval(timer);
+        }, 18);
+      });
+    }
+  }, { threshold: 0.4 });
+
+  if (statsSection) statsObserver.observe(statsSection);
+
+  // ─── SMOOTH NAV SCROLL ───
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+</script>
+</body>
+</html>
