@@ -61,3 +61,6 @@ celery_worker.log
 
 # MLflow
 mlruns/
+
+# Local planning notes
+plans.md
